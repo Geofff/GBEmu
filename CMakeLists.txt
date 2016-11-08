@@ -16,5 +16,5 @@ configure_file (
 )
 
 
-add_executable(GBEmu ${PROJECT_SOURCE_DIR}/main.c)
+add_executable(GBEmu ${PROJECT_SOURCE_DIR}/main.c ${PROJECT_SOURCE_DIR}/cpu.c ${PROJECT_SOURCE_DIR}/memory.c)
 target_link_libraries(GBEmu ${SDL2_LIBRARY})
