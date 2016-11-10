@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include "memory.h"
 
 typedef struct CPU {
     uint16_t PC;
@@ -26,36 +27,38 @@ typedef struct CPU {
         };
         uint16_t HL;
     };
-    union {
-        struct {
-            unsigned int F_UNUSED_1 : 1;
-            unsigned int F_UNUSED_2 : 1;
-            unsigned int F_UNUSED_3 : 1;
-            unsigned int F_UNUSED_4 : 1;
-            unsigned int F_C : 1;
-            unsigned int F_H : 1;
-            unsigned int F_N : 1;
-            unsigned int F_Z : 1;
-        };
-        uint8_t F;
-    };
+    int F_C;
+    int F_H;
+    int F_N;
+    int F_Z;
     uint8_t *HL_VAL;
     uint16_t d16;
     uint8_t d8;
 } CPU;
 
+typedef struct Interrupt {
+    uint8_t enabled;
+} Interrupt;
+
 void (*opcode_handlers[256])();
 char *opcode_names[256];
 int opcode_cycles[256];
 int opcode_implemented[256];
+int opcode_length[256];
 void *opcode_args_1[256];
 void *opcode_args_2[256];
+uint8_t running;
 void executeOpcode();
-
+uint8_t opcode;
 // Macro to register opcode
 // Args: (Opcode, Num cycles, handler function, opcode name, first argument, second argument)
-#define REGISTER_OPCODE(o, c, h, n, a, b) {opcode_cycles[0x##o] = c; opcode_handlers[0x##o] = code_handler_##h; opcode_names[0x##o] = n; opcode_implemented[0x##o] = 1; opcode_args_1[0x##o] = a;opcode_args_2[0x##o] = b;}
+#define REGISTER_OPCODE(o, c, l, h, n, a, b) {opcode_length[0x##o] = l; opcode_cycles[0x##o] = c; opcode_handlers[0x##o] = code_handler_##h; opcode_names[0x##o] = n; opcode_implemented[0x##o] = 1; opcode_args_1[0x##o] = (void*)a;opcode_args_2[0x##o] = b;}
 //#define SET_ZN(value) cpu.F_Z = !(value); cpu.F_N = 
 CPU cpu;
+Interrupt interrupts;
 void initCPU();
 
+
+extern void consoleLog(const char *format, ...);
+extern void consoleError(const char *format, ...);
+    
