@@ -19,7 +19,7 @@ configure_file (
 )
 
 
-add_executable(GBEmu ${PROJECT_SOURCE_DIR}/main.c ${PROJECT_SOURCE_DIR}/cpu.c ${PROJECT_SOURCE_DIR}/memory.c )
+add_executable(GBEmu ${PROJECT_SOURCE_DIR}/main.c ${PROJECT_SOURCE_DIR}/cpu.c ${PROJECT_SOURCE_DIR}/memory.c ${PROJECT_SOURCE_DIR}/gpu.c)
 target_link_libraries(GBEmu ${SDL2_LIBRARY})
 target_link_libraries(GBEmu ${LibAgar_LIBRARIES})
 target_link_libraries(GBEmu "X11")

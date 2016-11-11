@@ -14,12 +14,21 @@ void code_handler_ld_w(){
 }
 
 void code_handler_ldi_w_indirect(){
-    writeByte(*(uint16_t*)opcode_args_1[opcode]++, cpu.A);
+    writeByte((*(uint16_t*)opcode_args_1[opcode])++, cpu.A);
 }
 
 void code_handler_ldd_w_indirect(){
-    writeByte(*(uint16_t*)opcode_args_1[opcode]--, cpu.A);
+    writeByte((*(uint16_t*)opcode_args_1[opcode])--, cpu.A);
 }
+
+void code_handler_lda_hp_indirect(){
+    cpu.A = readByte((*(uint16_t*)opcode_args_1[opcode])++);
+}
+
+void code_handler_lda_hn_indirect(){
+    cpu.A = readByte((*(uint16_t*)opcode_args_1[opcode])--);
+}
+
 
 // Load word indirectly
 void code_handler_ld_w_indirect(){
@@ -466,6 +475,8 @@ void initCPU(){
 
     REGISTER_OPCODE(E0, 12, 2, ldh_b_indirect_w, "LDH (a8),A", &cpu.d8, &cpu.A);
     REGISTER_OPCODE(F0, 12, 2, ldh_b_indirect_r, "LDH A,(a8)", &cpu.d8, &cpu.A);
+    REGISTER_OPCODE(2A, 8, 1, lda_hp_indirect, "LD A,(HL+)", &cpu.HL_VAL, &cpu.A);
+    REGISTER_OPCODE(3A, 8, 1, lda_hn_indirect, "LD A,(HL-)", &cpu.HL_VAL, &cpu.A);
 }
 
 void executeOpcode(){

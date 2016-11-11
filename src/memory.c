@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "cpu.h"
+#include "gpu.h"
 
 uint8_t readByte(uint16_t address){
     switch (address & 0xF000){
@@ -77,12 +78,13 @@ void writeByte(uint16_t address, uint8_t value){
         // Video RAM
         case 0x8000:
         case 0x9000:
-            VRAM[address & 0x1FFFF] = value;
+            VRAM[address & 0x1FFF] = value;
+            updateTileSet(address, value);
             return;
         // External RAM
         case 0xA000:
         case 0xB000:
-            ERAM[address & 0x1FFFF] = value;
+            ERAM[address & 0x1FFF] = value;
             return;
         // Working Wram
         case 0xC000:

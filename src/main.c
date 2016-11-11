@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "config.h"
+#include "gpu.h"
 #include "cpu.h" 
 #include <stdlib.h>
 #include <unistd.h>
@@ -35,6 +36,7 @@ AG_Timer timer;
 AG_Console *cons;
 AG_Color errorColor = {255, 0, 0}; 
 AG_Surface *mainSurface;
+AG_Surface *scaledSurface;
 AG_Pixmap *mainPM;
 
 size_t PrintX16(AG_FmtString *fs, char *dst, size_t dstSize){
@@ -52,14 +54,20 @@ size_t PrintX8(AG_FmtString *fs, char *dst, size_t dstSize){
 void *executorFunc(){
     printf("got launched!");
     while (1){
-        usleep(250000);
+        usleep(10000);
         if (running){
             executeOpcode();
+            //gpuTick();
+            if (gpu.draw){
+                gpu.draw = 0;
+                draw();
+            }
         }
     }
 }
 
 void toggleExecution();
+
 int main(int argc, char **argv){
     pthread_t pth;
 
@@ -80,6 +88,7 @@ int main(int argc, char **argv){
     readFile(ROM, rom);
     fclose(rom);
     cpu.PC = 0x100;
+    //cpu.PC = 0x00;
     
     doGUI();
     return 0;
@@ -114,8 +123,9 @@ void doGUI(){
     // Setup pixel rendered
     
     mainSurface = AG_SurfaceFromPixelsRGB(fullMap, ORIG_WIDTH, ORIG_HEIGHT, 32, 0xFF0000, 0x00FF00, 0x0000FF);
+    scaledSurface = AG_SurfaceRGB(SCREEN_WIDTH, SCREEN_HEIGHT, 32, 0, 0xFF0000, 0x00FF00, 0x0000FF);
 
-    mainPM = AG_PixmapFromSurfaceScaled(gameBox, AG_PIXMAP_RESCALE, mainSurface, SCREEN_WIDTH, SCREEN_HEIGHT);
+    mainPM = AG_PixmapFromSurfaceNODUP(gameBox, AG_PIXMAP_RESCALE, scaledSurface);
     //mainPM = AG_PixmapFromSurface(gameBox, AG_PIXMAP_EXPAND, mainSurface);
 
 
@@ -150,6 +160,7 @@ void doGUI(){
     AG_LabelSizeHint(lbl, 1, "C: 0xXXXX");
     lbl = AG_LabelNewPolled(infoBox, 0, "HL: 0x%[x16]", &cpu.HL);
     AG_LabelSizeHint(lbl, 1, "PC: 0xXXXX");
+    AG_WindowUpdate(win);
     
     AG_WindowSetPadding(win, 0, 0, 0, 0);
     AG_WindowSetGeometryAligned(win, AG_WINDOW_MC, DEBUG_WIDTH+SCREEN_WIDTH+INFO_WIDTH, DEBUG_HEIGHT+CONSOLE_HEIGHT);
@@ -187,9 +198,12 @@ void consoleError(const char *format, ...){
 void draw(){
     for(int x = 0; x < ORIG_WIDTH; x++){
         for(int y = 0; y < ORIG_HEIGHT; y++){
-            AG_PUT_PIXEL2(mainSurface, x, y, 0xFF00FF);
+            AG_PUT_PIXEL2(mainSurface, x, y, x%2?0xFF00FF:0x00FF00);
         }
     }
+    
+    AG_ScaleSurface(mainSurface, SCREEN_WIDTH, SCREEN_HEIGHT, &scaledSurface);
     AG_PixmapUpdateSurface(mainPM, mainPM->n);
+    AG_WindowUpdate(win);
 
 }
