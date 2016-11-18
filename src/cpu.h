@@ -32,7 +32,6 @@ typedef struct CPU {
     int F_H;
     int F_N;
     int F_Z;
-    uint8_t *HL_VAL;
     uint16_t d16;
     uint8_t d8;
 } CPU;
@@ -62,4 +61,3 @@ void initCPU();
 
 extern void consoleLog(const char *format, ...);
 extern void consoleError(const char *format, ...);
-    

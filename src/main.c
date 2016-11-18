@@ -9,7 +9,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <pthread.h>
-#include <SDL2/SDL.h>
+#include <SDL/SDL.h>
 
 #define ORIG_WIDTH 160
 #define ORIG_HEIGHT 144
@@ -26,8 +26,13 @@ void doGUI();
 void consoleLog(const char *format, ...);
 void consoleError(const char *format, ...);
 void startTimer();
-void draw();
+void drawScreen();
+void dumpMem();
+void createTilesWindow();
 int surfaceIndex;
+AG_Pixmap *mainPM;
+AG_Surface *mainSurface;
+SDL_Surface *sdlSurface;
 
 uint32_t fullMap[ORIG_WIDTH*ORIG_HEIGHT];
 
@@ -38,6 +43,9 @@ AG_Color errorColor = {255, 0, 0};
 AG_Surface *mainSurface;
 AG_Surface *scaledSurface;
 AG_Pixmap *mainPM;
+AG_Window *pWin;
+AG_Surface *pSurface;
+AG_Pixmap *pPM;
 
 size_t PrintX16(AG_FmtString *fs, char *dst, size_t dstSize){
 	uint16_t *var = AG_FMTSTRING_ARG(fs);
@@ -54,13 +62,12 @@ size_t PrintX8(AG_FmtString *fs, char *dst, size_t dstSize){
 void *executorFunc(){
     printf("got launched!");
     while (1){
-        usleep(10000);
         if (running){
             executeOpcode();
             //gpuTick();
             if (gpu.draw){
                 gpu.draw = 0;
-                draw();
+                drawScreen();
             }
         }
     }
@@ -79,14 +86,18 @@ int main(int argc, char **argv){
     int sum = 0;
     for(int i = 0; i < 256; i++){
         sum += opcode_implemented[i];
+        if (!opcode_implemented[i]){
+            printf("Not Implemented: 0x%02X\n", i);
+        }
     }
-    consoleLog("Completed %d/%d\n", sum, 256-11);
-    FILE *bios = fopen(argv[1], "rb");
-    readFile(BIOS, bios);
-    fclose(bios);
+    printf("Completed %d/%d\n", sum, 256-11);
     FILE *rom = fopen(argv[2], "rb");
-    readFile(ROM, rom);
+    readFile(0, rom);
     fclose(rom);
+    FILE *bios = fopen(argv[1], "rb");
+    readFile(0, bios);
+    fclose(bios);
+    clearTiles();
     cpu.PC = 0x100;
     //cpu.PC = 0x00;
     
@@ -102,10 +113,9 @@ void doGUI(){
 		return;
 	}
     // Create our window
-    win = AG_WindowNew(0);
+    win = AG_WindowNewNamed(0, GBEmu_NAME);
 
     // Setup boxes
-
     AG_Fixed * container = AG_FixedNew(win, AG_FIXED_EXPAND);
     AG_Box *debugBox = AG_BoxNew(container, AG_BOX_VERT, AG_BOX_FRAME| AG_BOX_EXPAND);
     AG_Box *consoleBox = AG_BoxNew(container, AG_BOX_VERT, AG_BOX_FRAME| AG_BOX_EXPAND);
@@ -128,7 +138,6 @@ void doGUI(){
     mainPM = AG_PixmapFromSurfaceNODUP(gameBox, AG_PIXMAP_RESCALE, scaledSurface);
     //mainPM = AG_PixmapFromSurface(gameBox, AG_PIXMAP_EXPAND, mainSurface);
 
-
     // Register custom formatter
     AG_RegisterFmtStringExt("x16", PrintX16);
     AG_RegisterFmtStringExt("x8", PrintX8);
@@ -142,7 +151,10 @@ void doGUI(){
     cons = AG_ConsoleNew(consoleBox, AG_CONSOLE_EXPAND);
 
     AG_ButtonNewFn(debugBox, 0, "Step", executeOpcode, NULL);
-    AG_ButtonNewFn(debugBox, 0, "Draw", draw, NULL);
+    AG_ButtonNewFn(debugBox, 0, "Draw", drawScreen, NULL);
+    
+    AG_ButtonNewFn(debugBox, 0, "Dump", dumpMem, NULL);
+    AG_ButtonNewFn(debugBox, 0, "Tiles", createTilesWindow, NULL);
     AG_ButtonNewFn(debugBox, AG_BUTTON_STICKY, "Run", toggleExecution, NULL);
     AG_Label *lbl = AG_LabelNewPolled(infoBox, 0, "PC: 0x%[x16]", &cpu.PC);
     AG_LabelSizeHint(lbl, 1, "PC: 0xXXXX");
@@ -195,15 +207,94 @@ void consoleError(const char *format, ...){
     AG_ConsoleMsgColor(line, &errorColor);
 }
 
-void draw(){
+void dumpMem(){    
+    FILE *vdump = fopen("dump/VRAM.dump","wb");
+    fwrite(VRAM, sizeof(uint8_t), VRAM_SIZE, vdump);
+    fclose(vdump);
+    FILE *wdump = fopen("dump/WRAM.dump","wb");
+    fwrite(WRAM, sizeof(uint8_t), WRAM_SIZE, wdump);
+    fclose(wdump);
+
+}
+
+void drawScreen(){
+    /*
     for(int x = 0; x < ORIG_WIDTH; x++){
         for(int y = 0; y < ORIG_HEIGHT; y++){
             AG_PUT_PIXEL2(mainSurface, x, y, x%2?0xFF00FF:0x00FF00);
         }
     }
-    
+    */
+    /*
+    for(int i = 0; i < 8; i++){
+        for(int x = 0; x < 8; x++){
+            for(int y = 0; y < 8; y++){
+                uint32_t colour;
+                switch(tiles[i][x][y]){
+                    case 0x0:
+                        colour = 0xFFFFFF;
+                        break;
+                    case 0x1:
+                        colour = 0xFF0000;
+                        break;
+                    case 0x2:
+                        colour = 0x00FF00;
+                        break;
+                    case 0x3:
+                        colour = 0x0000FF;
+                        break;
+                }
+                AG_PUT_PIXEL2(mainSurface, 8*i+x, y, colour);
+            }
+        }
+    }*/
     AG_ScaleSurface(mainSurface, SCREEN_WIDTH, SCREEN_HEIGHT, &scaledSurface);
     AG_PixmapUpdateSurface(mainPM, mainPM->n);
     AG_WindowUpdate(win);
+
+}
+
+void createTilesWindow(){
+    int tilesWide = 16;
+    int tilesTall = 24;
+
+    uint32_t tileMap[tilesWide*tilesTall*8*8]; 
+
+    // Format to proper format
+    for(int i = 0; i < tilesWide*tilesTall; i++){
+        for(int x = 0; x < 8; x++){
+            for(int y = 0; y < 8; y++){
+                uint32_t colour;
+                switch(tiles[i][y][x]){
+                    case 0x0:
+                        colour = 0xFFFFFF;
+                        break;
+                    case 0x1:
+                        colour = 0xFF0000;
+                        break;
+                    case 0x2:
+                        colour = 0x00FF00;
+                        break;
+                    case 0x3:
+                        colour = 0x0000FF;
+                        break;
+                }
+                uint16_t x1 = (i%tilesWide)*8+x;
+                uint16_t y1 = (i/tilesWide)*8+y;
+                tileMap[y1*tilesWide*8+x1] = colour;
+            }
+        }
+    }
+
+    pWin = AG_WindowNewNamed(0, GBEmu_NAME " - Tiles");
+    AG_Box *pBox = AG_BoxNew(pWin, AG_BOX_HORIZ, AG_BOX_EXPAND|AG_BOX_FRAME);
+    pSurface = AG_SurfaceFromPixelsRGB(tileMap, tilesWide*8, tilesTall*8, 32, 0xFF0000, 0x00FF00, 0x0000FF);
+    AG_Surface *pScaled = AG_SurfaceRGB(tilesWide*8*SCREEN_SCALE, tilesTall*8*SCREEN_SCALE, 32, 0, 0xFF0000, 0x00FF00, 0x0000FF);
+
+    AG_ScaleSurface(pSurface, tilesWide*8*SCREEN_SCALE, tilesTall*8*SCREEN_SCALE, &pScaled);
+    pPM = AG_PixmapFromSurfaceNODUP(pBox, AG_PIXMAP_RESCALE, pScaled);
+
+    AG_PixmapUpdateSurface(pPM, pPM->n);
+    AG_WindowUpdate(pWin);
 
 }

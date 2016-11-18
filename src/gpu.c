@@ -2,15 +2,27 @@
 extern uint32_t *fullMap;
 void updateTileSet(uint16_t address, uint8_t value){
     address &= 0x1FFE;
+    printf("New address is 0x%04X\n", address);
     uint16_t tile = (address >> 4) & 511;
+    //printf("Tile should be 0x%04X, but fuck that\n", tile);
+    //tile = 0;
     uint8_t y = (address >> 1) & 7;
     uint8_t sx = 0;
     for(int x = 0 ; x < 8; x++){
         sx = 1 << (7-x);
         tiles[tile][y][x] = ((VRAM[address] & sx) ? 1 : 0) + ((VRAM[address + 1] & sx) ? 2 : 0);
     }
+    printf("Updated tiles\n");
 }
-
+void clearTiles(){
+    for(int i = 0; i < 384;i++){
+        for(int x = 0; x < 8; x++){
+            for (int y = 0; y < 8; y++){
+                tiles[i][y][x] = 0;
+            }
+        }
+    }
+}
 void renderScanline(){
     uint16_t mapOffset = gpu.bgMode ? 0x1C00 : 0x1800;
     mapOffset += ((gpu.line + gpu.scanY)&255) >> 3;
