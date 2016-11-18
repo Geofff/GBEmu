@@ -10,6 +10,8 @@
 #include <time.h>
 #include <pthread.h>
 #include <SDL/SDL.h>
+#include <gtk/gtk.h>
+#include "gui.h"
 
 #define ORIG_WIDTH 160
 #define ORIG_HEIGHT 144
@@ -28,6 +30,7 @@ void consoleError(const char *format, ...);
 void startTimer();
 void drawScreen();
 void dumpMem();
+void eventCallback();
 void createTilesWindow();
 int surfaceIndex;
 AG_Pixmap *mainPM;
@@ -101,10 +104,17 @@ int main(int argc, char **argv){
     cpu.PC = 0x100;
     //cpu.PC = 0x00;
     
-    doGUI();
+
+    launchGUI("HelloWorld.glade", argc, argv);
     return 0;
 }
+void eventCallback(){
+    printf("Event called\n");
+}
+void doGUI(){
+}
 
+/*
 void doGUI(){
     char* test = "POO";
     if (AG_InitCore(NULL, 0) == -1 ||
@@ -180,6 +190,7 @@ void doGUI(){
     AG_EventLoop();
     return;
 }
+*/
 
 void toggleExecution(){
     running = !running;
