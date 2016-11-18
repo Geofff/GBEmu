@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 #include "cpu.h"
 
 typedef enum {OAM_mode, VRAM_mode, HBLANK_mode, VBLANK_mode} GPU_mode;
@@ -13,12 +14,13 @@ typedef struct GPU{
     uint8_t switchLCD;
     uint8_t scanX;
     uint8_t scanY;
-    uint8_t *pallete;
+    uint32_t pallete[4];
     
 } GPU;
 
 GPU gpu;
 uint8_t tiles[384][8][8];
+uint32_t fullMap[160*144];
 
 void clearTiles();
 void gpuTick();

@@ -64,7 +64,7 @@ void *executorFunc(){
     while (1){
         if (running){
             executeOpcode();
-            //gpuTick();
+            gpuTick();
             if (gpu.draw){
                 gpu.draw = 0;
                 drawScreen();
@@ -218,6 +218,10 @@ void dumpMem(){
 }
 
 void drawScreen(){
+    uint32_t *pixels = (uint32_t *)mainSurface->pixels;
+    for(int i = 0; i < ORIG_WIDTH*ORIG_HEIGHT; i++){
+        pixels[i] = fullMap[i];
+    }
     /*
     for(int x = 0; x < ORIG_WIDTH; x++){
         for(int y = 0; y < ORIG_HEIGHT; y++){
@@ -285,6 +289,7 @@ void createTilesWindow(){
             }
         }
     }
+    
 
     pWin = AG_WindowNewNamed(0, GBEmu_NAME " - Tiles");
     AG_Box *pBox = AG_BoxNew(pWin, AG_BOX_HORIZ, AG_BOX_EXPAND|AG_BOX_FRAME);

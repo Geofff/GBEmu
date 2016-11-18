@@ -1,11 +1,9 @@
 #include "gpu.h"
-extern uint32_t *fullMap;
+
 void updateTileSet(uint16_t address, uint8_t value){
     address &= 0x1FFE;
     printf("New address is 0x%04X\n", address);
     uint16_t tile = (address >> 4) & 511;
-    //printf("Tile should be 0x%04X, but fuck that\n", tile);
-    //tile = 0;
     uint8_t y = (address >> 1) & 7;
     uint8_t sx = 0;
     for(int x = 0 ; x < 8; x++){
@@ -15,6 +13,11 @@ void updateTileSet(uint16_t address, uint8_t value){
     printf("Updated tiles\n");
 }
 void clearTiles(){
+
+    gpu.pallete[0] = 0xFFFFFF;
+    gpu.pallete[1] = 0xFF0000;
+    gpu.pallete[2] = 0xFFFF00;
+    gpu.pallete[3] = 0xFFFFFF;
     for(int i = 0; i < 384;i++){
         for(int x = 0; x < 8; x++){
             for (int y = 0; y < 8; y++){
@@ -29,19 +32,30 @@ void renderScanline(){
     uint16_t lineOffset = gpu.scanX >> 3;
     uint8_t x = gpu.scanX & 7;
     uint8_t y = (gpu.line + gpu.scanY) & 7;
-    uint16_t canvasOffset = gpu.line * 160 *4;
+    uint16_t canvasOffset = gpu.line * 160;
     uint8_t tile = VRAM[mapOffset+lineOffset];
     if (gpu.bgMode && tile < 128){
         tile += 256;
     }
-    uint8_t *colour;
+    uint32_t colour;
     for(int i = 0; i < 160; i++){
-        colour = gpu.pallete[tiles[tile][y][x]];
-        fullMap[canvasOffset] = colour[0];
-        fullMap[canvasOffset+1] = colour[1];
-        fullMap[canvasOffset+2] = colour[2];
-        fullMap[canvasOffset+3] = colour[3];
-        canvasOffset += 4;
+        printf("Plotting colour %d\n", i);
+        switch(tiles[i][y][x]){
+            case 0x0:
+                colour = 0xFFFFFF;
+                break;
+            case 0x1:
+                colour = 0xFF0000;
+                break;
+            case 0x2:
+                colour = 0x00FF00;
+                break;
+            case 0x3:
+                colour = 0x0000FF;
+                break;
+        }
+        fullMap[canvasOffset] = colour;
+        canvasOffset ++;;
 
         x++;
         if (x == 8){
