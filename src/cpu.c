@@ -686,7 +686,7 @@ void initCPU(){
 void executeOpcode(){
     opcode = readByte(cpu.PC);
     if (opcode_implemented[opcode] == 0){
-        consoleError("Opcode 0x%X at 0x%X is not implemented\n", opcode, cpu.PC);
+        printf("Opcode 0x%X at 0x%X is not implemented\n", opcode, cpu.PC);
         return;
     }
     // Prefetch values
