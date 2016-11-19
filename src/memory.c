@@ -79,7 +79,7 @@ void writeByte(uint16_t address, uint8_t value){
         case 0x8000:
         case 0x9000:
             VRAM[address & 0x1FFF] = value;
-            printf("Wrote to VRAM\n");
+            printf("Wrote to VRAM: 0x%02X\n", value);
             if (address < 0x9800){
                 updateTileSet(address, value);
             }
@@ -140,6 +140,7 @@ void writeByte(uint16_t address, uint8_t value){
             }
         }
     }
+    assert(value == readByte(address));
 }
 
 void writeWord(uint16_t address, uint16_t value){

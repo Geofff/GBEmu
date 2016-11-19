@@ -1,5 +1,7 @@
 #include "gui.h"
 #include "gpu.h"
+#include "gui/window-debugger.h"
+#include "cpu.h"
 
 // Storage of our drawing surface
 cairo_surface_t *surface = NULL;
@@ -7,12 +9,14 @@ cairo_surface_t *tileSurface = NULL;
 uint8_t image[8*8*4];
 GtkWidget *drawingArea;
 GtkWidget *tileArea;
+GtkBuilder *builder;
 
 void launchGUI(char *interfaceName, int argc, char **argv){
     GtkBuilder *builder;
     GObject *window;
     GObject *tileWindow;
     GObject *button;
+    GObject *runningButton;
     gtk_init(&argc, &argv);
     builder = gtk_builder_new();
     gtk_builder_add_from_file(builder, interfaceName, NULL);
@@ -29,6 +33,11 @@ void launchGUI(char *interfaceName, int argc, char **argv){
     g_signal_connect (tileArea, "configure-event",
                     G_CALLBACK (configureTilesCallback), NULL);
 
+    // Button to switch running and not
+    runningButton = gtk_builder_get_object (builder, "running");
+    g_signal_connect (runningButton, "clicked", G_CALLBACK (runningPressCallback), NULL);
+    debuggerInitWindow(builder);
+
 
     drawingArea = gtk_builder_get_object (builder, "drawingarea");
     g_signal_connect (drawingArea, "button-press-event",
@@ -42,18 +51,28 @@ void launchGUI(char *interfaceName, int argc, char **argv){
     g_signal_connect (drawingArea, "draw",
                     G_CALLBACK (drawCallback), NULL);
 
-    button = gtk_builder_get_object (builder, "button1");
+    button = gtk_builder_get_object (builder, "exit");
     g_signal_connect (button, "clicked", G_CALLBACK (gtk_main_quit), NULL);
+    button = gtk_builder_get_object (builder, "dump");
+    g_signal_connect (button, "clicked", G_CALLBACK (dumpMem), NULL);
     button = gtk_builder_get_object (builder, "button2");
     g_signal_connect (button, "clicked", G_CALLBACK (configureTilesCallback), NULL);
     button = gtk_builder_get_object (builder, "button3");
     g_signal_connect (button, "clicked", G_CALLBACK (redrawTiles), NULL);
-
+    button = gtk_builder_get_object (builder, "step");
+    g_signal_connect (button, "clicked", G_CALLBACK (stepCallback), NULL);
+    g_timeout_add(1, idleCallback, NULL);
     gtk_main();
 }
 
 gboolean buttonPressCallback(GtkWidget *widget, GdkEventButton *event, gpointer data){
     printf("Button pressed\n");
+}
+
+
+gboolean runningPressCallback(GtkWidget *widget, GdkEventButton *event, gpointer data){
+    printf("Running pressed\n");
+    cpu.running = !cpu.running;
 }
 
 gboolean keyPressCallback(GtkWidget *widget, GdkEventButton *event, gpointer data){
@@ -117,11 +136,12 @@ gboolean configureTilesCallback(GtkWidget *widget, GdkEventConfigure *event, gpo
 
 
     printf("Configuring tiles...\n");
+    updateLabels();
     
     if (tileSurface){
         cairo_surface_destroy(tileSurface);
     }
-    tileSurface = gdk_window_create_similar_surface(gtk_widget_get_window(drawingArea), CAIRO_CONTENT_COLOR, gtk_widget_get_allocated_width(drawingArea), gtk_widget_get_allocated_height(drawingArea));
+    tileSurface = gdk_window_create_similar_surface(gtk_widget_get_window(tileArea), CAIRO_CONTENT_COLOR, gtk_widget_get_allocated_width(tileArea), gtk_widget_get_allocated_height(tileArea));
     cairo_t *cr = cairo_create(tileSurface);
     
     GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)image, GDK_COLORSPACE_RGB, TRUE, 8, 8, 8, 32, NULL, NULL);
@@ -165,12 +185,42 @@ void redrawTiles(){
         }
     }
     cairo_t *cr = cairo_create(tileSurface);
-    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)imageMap, GDK_COLORSPACE_RGB, TRUE, 8, tilesWide*8, tilesTall*8, 32, NULL, NULL);
+    cairo_scale(cr, 2, 2);
+    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)imageMap, GDK_COLORSPACE_RGB, TRUE, 8, tilesWide*8, tilesTall*8, tilesWide*8*4, NULL, NULL);
     gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
     cairo_paint(cr);
     cairo_destroy(cr);
     gtk_widget_queue_draw(tileArea);
 }
 
+void dumpMem(){    
+    FILE *vdump = fopen("dump/VRAM.dump","wb");
+    fwrite(VRAM, sizeof(uint8_t), VRAM_SIZE, vdump);
+    fclose(vdump);
+    FILE *wdump = fopen("dump/WRAM.dump","wb");
+    fwrite(WRAM, sizeof(uint8_t), WRAM_SIZE, wdump);
+    fclose(wdump);
+}
+
+gboolean idleCallback(gpointer data){
+    if (cpu.running){
+        executeOpcode();
+        updateLabels();
+        gpuTick();
+        if (gpu.draw){
+            redrawTiles();
+            gpu.draw = 0;
+        }
+    }
+    return TRUE;
+}
 
 
+gboolean stepCallback(GtkWidget *widget, GdkEventConfigure *event, gpointer data){executeOpcode();
+        updateLabels();
+        gpuTick();
+        if (gpu.draw){
+            redrawTiles();
+            gpu.draw = 0;
+        }
+}

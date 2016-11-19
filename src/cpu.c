@@ -692,9 +692,7 @@ void executeOpcode(){
     // Prefetch values
     cpu.d8 = readByte(cpu.PC+1);
     cpu.d16 = (readByte(cpu.PC+2) << 8) + readByte(cpu.PC+1);
-    // TODO fix every reference to HL_VAL
     opcode_handlers[opcode]();
-    printf("0x%02X : %s\n", opcode, opcode_names[opcode]);
     
     // What a shitty hack
     char buffer[512];
@@ -734,6 +732,7 @@ void executeOpcode(){
     } else {
         sprintf(formattedString, "%s", opcode_names[opcode]);
     }
+    //printf("%s\n", formattedString);
 
 /*
     sprintf(formattedString, "%s", opcode_names[opcode]);
@@ -742,8 +741,8 @@ void executeOpcode(){
     }
     if (strstr(opcode_names[opcode], "r16") || strstr(opcode_names[opcode], "d16") || strstr(opcode_names[opcode], "a16")){
         sprintf(formattedString, "%s 0x%X", opcode_names[opcode], cpu.d16);
-    }*/
-    consoleLog("%s", formattedString);
+    }
+    */
 
     cpu.PC += opcode_length[opcode];
 }

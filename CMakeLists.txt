@@ -24,7 +24,7 @@ configure_file (
 )
 
 
-add_executable(GBEmu ${PROJECT_SOURCE_DIR}/main.c ${PROJECT_SOURCE_DIR}/cpu.c ${PROJECT_SOURCE_DIR}/memory.c ${PROJECT_SOURCE_DIR}/gpu.c ${PROJECT_SOURCE_DIR}/gui.c)
+add_executable(GBEmu ${PROJECT_SOURCE_DIR}/main.c ${PROJECT_SOURCE_DIR}/cpu.c ${PROJECT_SOURCE_DIR}/memory.c ${PROJECT_SOURCE_DIR}/gpu.c ${PROJECT_SOURCE_DIR}/gui.c ${PROJECT_SOURCE_DIR}/gui/window-debugger.c)
 target_link_libraries(GBEmu ${SDL2_LIBRARY})
 target_link_libraries(GBEmu ${LibAgar_LIBRARIES})
 target_link_libraries(GBEmu "X11")

@@ -12,6 +12,7 @@
 #include <SDL/SDL.h>
 #include <gtk/gtk.h>
 #include "gui.h"
+#include "gui/window-debugger.h"
 
 #define ORIG_WIDTH 160
 #define ORIG_HEIGHT 144
@@ -62,28 +63,13 @@ size_t PrintX8(AG_FmtString *fs, char *dst, size_t dstSize){
     return strlen(dst);
 }
 
-void *executorFunc(){
-    printf("got launched!");
-    while (1){
-        if (running){
-            executeOpcode();
-            gpuTick();
-            if (gpu.draw){
-                gpu.draw = 0;
-                drawScreen();
-            }
-        }
-    }
-}
+
 
 void toggleExecution();
 
 int main(int argc, char **argv){
-    pthread_t pth;
-
-    pthread_create(&pth, NULL, &executorFunc, NULL);
     printf("%s: Version %d.%d\n", GBEmu_NAME, GBEmu_VERSION_MAJOR, GBEmu_VERSION_MINOR);
-    running = 0;
+    cpu.running = 0;
     initCPU();
     // Quick checker
     int sum = 0;
@@ -200,33 +186,18 @@ void toggleExecution(){
 void consoleLog(const char *format, ...){
     va_list argptr;
     va_start(argptr, format);
-    // Naughty buffer overflow
-    char formatted[256];
-    vsprintf(formatted, format, argptr);
+    vprintf(format, argptr);
     va_end(argptr);
-    AG_ConsoleMsg(cons, "%s", formatted);
 }
 
 void consoleError(const char *format, ...){
     va_list argptr;
     va_start(argptr, format);
-    // Naughty buffer overflow
-    char formatted[256];
-    vsprintf(formatted, format, argptr);
+    vprintf(format, argptr);
     va_end(argptr);
-    AG_ConsoleLine *line = AG_ConsoleMsg(cons, "%s", formatted);
-    AG_ConsoleMsgColor(line, &errorColor);
 }
 
-void dumpMem(){    
-    FILE *vdump = fopen("dump/VRAM.dump","wb");
-    fwrite(VRAM, sizeof(uint8_t), VRAM_SIZE, vdump);
-    fclose(vdump);
-    FILE *wdump = fopen("dump/WRAM.dump","wb");
-    fwrite(WRAM, sizeof(uint8_t), WRAM_SIZE, wdump);
-    fclose(wdump);
 
-}
 
 void drawScreen(){
     uint32_t *pixels = (uint32_t *)mainSurface->pixels;

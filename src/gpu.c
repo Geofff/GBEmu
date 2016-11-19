@@ -2,8 +2,8 @@
 
 void updateTileSet(uint16_t address, uint8_t value){
     address &= 0x1FFE;
-    printf("New address is 0x%04X\n", address);
     uint16_t tile = (address >> 4) & 511;
+    printf("New address is 0x%04X\t tile is 0x%X\n", address, tile);
     uint8_t y = (address >> 1) & 7;
     uint8_t sx = 0;
     for(int x = 0 ; x < 8; x++){
@@ -11,6 +11,7 @@ void updateTileSet(uint16_t address, uint8_t value){
         tiles[tile][y][x] = ((VRAM[address] & sx) ? 1 : 0) + ((VRAM[address + 1] & sx) ? 2 : 0);
     }
     printf("Updated tiles\n");
+    gpu.draw = 1;
 }
 void clearTiles(){
 

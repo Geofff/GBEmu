@@ -34,6 +34,7 @@ typedef struct CPU {
     int F_Z;
     uint16_t d16;
     uint8_t d8;
+    uint8_t running;
 } CPU;
 
 typedef struct Interrupt {
