@@ -1,11 +1,11 @@
 #include "cpu.h"
+#include "cb.h"
 
 // No operation
 void code_handler_nop(){}
 
 // Load byte
 void code_handler_ld_b(){
-    printf("opcode is 0x%02X : %s : HL is 0x%02X\n", opcode, opcode_names[opcode], cpu.HL);
     *(uint8_t*)opcode_args_1[opcode] = *(uint8_t*)opcode_args_2[opcode];
 }
 
@@ -43,7 +43,6 @@ void code_handler_lda_hp_indirect(){
 void code_handler_lda_hn_indirect(){
     cpu.A = readByte((*(uint16_t*)opcode_args_1[opcode])--);
 }
-
 
 // Load word indirectly
 void code_handler_ld_w_indirect(){
@@ -422,11 +421,26 @@ void code_handler_rst(){
 
 }
 
+void code_handler_ei(){
+    interrupts.enabled = 1;
+}
 
+void code_handler_cb(){
+    executeCB(*(uint8_t*)opcode_args_1[opcode]);
+}
 
 void initCPU(){
+    setupCB();
+    cpu.A = 0x11;
+    cpu.B = 0;
+    cpu.C = 0;
+    cpu.D = 0xFF;
+    cpu.E = 0x56;
+    cpu.HL = 0x000D;
     cpu.PC = 0x100;
+    cpu.ticks = 0;
     cpu.SP = 0xFFFE;
+    interrupts.enabled = 0;
     
     REGISTER_OPCODE( 0,  4, 1, nop, "nop", 0, 0);
     REGISTER_OPCODE( 1, 12, 3, ld_w, "LD BC,d16", &cpu.BC, &cpu.d16);
@@ -680,13 +694,19 @@ void initCPU(){
     REGISTER_OPCODE(1A, 8, 1,ld_w_indirect_read, "LD A,(DE)", &cpu.A, &cpu.DE);
     REGISTER_OPCODE(F2, 8, 1,ld_b_indirect_read, "LD A,(C)", &cpu.A, &cpu.C);
     REGISTER_OPCODE(E2, 8, 1,ld_b_indirect_write, "LD (C),A", &cpu.A, &cpu.C);
+    REGISTER_OPCODE(FA, 16, 3,ld_w_indirect_read, "LD A,(a16)", &cpu.A, &cpu.d16);
+    REGISTER_OPCODE(FB, 4, 1,ei, "EI", NULL, NULL);
+    REGISTER_OPCODE(CB, 4, 2,cb, "PREFIX CB", &cpu.d8, NULL);
 
 }
 
 void executeOpcode(){
     opcode = readByte(cpu.PC);
+    cpu.ticks += opcode_cycles[opcode];
     if (opcode_implemented[opcode] == 0){
         printf("Opcode 0x%X at 0x%X is not implemented\n", opcode, cpu.PC);
+        cpu.ticks+=1000;
+        cpu.running = 0;
         return;
     }
     // Prefetch values

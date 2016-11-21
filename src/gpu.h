@@ -20,7 +20,7 @@ typedef struct GPU{
 
 GPU gpu;
 uint8_t tiles[384][8][8];
-uint32_t fullMap[160*144];
+uint8_t fullMap[160*144*4];
 
 void clearTiles();
 void gpuTick();

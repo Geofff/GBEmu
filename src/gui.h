@@ -16,4 +16,5 @@ gboolean drawTilesCallback(GtkWidget*, cairo_t*, gpointer);
 
 void redrawTiles();
 void dumpMem();
+void drawScreen();
 gboolean idleCallback(gpointer);

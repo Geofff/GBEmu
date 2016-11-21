@@ -6,10 +6,11 @@
 // Storage of our drawing surface
 cairo_surface_t *surface = NULL;
 cairo_surface_t *tileSurface = NULL;
-uint8_t image[8*8*4];
+extern uint8_t fullMap[160*144*4];
 GtkWidget *drawingArea;
 GtkWidget *tileArea;
 GtkBuilder *builder;
+gint64 lastTime;
 
 void launchGUI(char *interfaceName, int argc, char **argv){
     GtkBuilder *builder;
@@ -57,11 +58,14 @@ void launchGUI(char *interfaceName, int argc, char **argv){
     g_signal_connect (button, "clicked", G_CALLBACK (dumpMem), NULL);
     button = gtk_builder_get_object (builder, "button2");
     g_signal_connect (button, "clicked", G_CALLBACK (configureTilesCallback), NULL);
+    g_signal_connect (button, "clicked", G_CALLBACK (configureCallback), NULL);
     button = gtk_builder_get_object (builder, "button3");
+    g_signal_connect (button, "clicked", G_CALLBACK (drawScreen), NULL);
     g_signal_connect (button, "clicked", G_CALLBACK (redrawTiles), NULL);
     button = gtk_builder_get_object (builder, "step");
     g_signal_connect (button, "clicked", G_CALLBACK (stepCallback), NULL);
     g_timeout_add(1, idleCallback, NULL);
+    lastTime = g_get_monotonic_time();
     gtk_main();
 }
 
@@ -84,31 +88,12 @@ gboolean keyReleaseCallback(GtkWidget *widget, GdkEventButton *event, gpointer d
 }
 
 gboolean configureCallback(GtkWidget *widget, GdkEventConfigure *event, gpointer data){
-    for(int i = 0; i < 64; i++){
-        image[i*4] = 0xFF;
-        image[i*4+1] = 0x00;
-        image[i*4+2] = 0x00;
-        image[i*4+3] = 0xFF;
-    }
-
     printf("Configuring...\n");
     
     if (surface){
         cairo_surface_destroy(surface);
     }
-    surface = gdk_window_create_similar_surface(gtk_widget_get_window(widget), CAIRO_CONTENT_COLOR, gtk_widget_get_allocated_width(widget), gtk_widget_get_allocated_height(widget));
-    cairo_t *cr = cairo_create(surface);
-    
-    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)image, GDK_COLORSPACE_RGB, TRUE, 8, 8, 8, 32, NULL, NULL);
-    //GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, 8, 8);
-    gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
-    //cairo_set_source_rgb(cr, 1, 0, 0);
-    //cairo_rectangle(cr, 20, 20, 6, 6);
-    //cairo_fill(cr);
-    cairo_paint(cr);
-    cairo_destroy(cr);
-    gtk_widget_queue_draw(drawingArea);
-
+    surface = gdk_window_create_similar_surface(gtk_widget_get_window(drawingArea), CAIRO_CONTENT_COLOR, gtk_widget_get_allocated_width(drawingArea), gtk_widget_get_allocated_height(drawingArea));
     return TRUE;
 }
 
@@ -142,14 +127,6 @@ gboolean configureTilesCallback(GtkWidget *widget, GdkEventConfigure *event, gpo
         cairo_surface_destroy(tileSurface);
     }
     tileSurface = gdk_window_create_similar_surface(gtk_widget_get_window(tileArea), CAIRO_CONTENT_COLOR, gtk_widget_get_allocated_width(tileArea), gtk_widget_get_allocated_height(tileArea));
-    cairo_t *cr = cairo_create(tileSurface);
-    
-    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)image, GDK_COLORSPACE_RGB, TRUE, 8, 8, 8, 32, NULL, NULL);
-    gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
-    cairo_paint(cr);
-    cairo_destroy(cr);
-    gtk_widget_queue_draw(tileArea);
-
     return TRUE;
 }
 
@@ -193,6 +170,61 @@ void redrawTiles(){
     gtk_widget_queue_draw(tileArea);
 }
 
+void drawScreen(){
+    uint8_t imageMap[160*144*4];
+    for(int i = 0 ; i < 160*144*4; i++){
+        imageMap[i] = 0x00;
+    }
+    
+    for(int x = 0; x < 20; x++){
+        for(int y = 0; y < 18; y++){
+            uint8_t tile = VRAM[0x9800+y*20+x];
+            for(int xx = 0; xx < 8; xx++){
+                for(int yy = 0; yy < 8; yy++){
+                    int offset = (y*8+yy)*(160*4)+(x*8+xx)*4;
+                    uint8_t pallete = tiles[tile][yy][xx];
+                    switch(pallete){
+                        case 0:
+                            imageMap[offset+0] = 0xFF;
+                            imageMap[offset+1] = 0xFF;
+                            imageMap[offset+2] = 0xFF;
+                            imageMap[offset+3] = 0xFF;
+                            break;
+                        case 1:
+                            imageMap[offset+0] = 0xFF;
+                            imageMap[offset+1] = 0x00;
+                            imageMap[offset+2] = 0x00;
+                            imageMap[offset+3] = 0xFF;
+                            break;
+                        case 2:
+                            imageMap[offset+0] = 0x00;
+                            imageMap[offset+1] = 0xFF;
+                            imageMap[offset+2] = 0x00;
+                            imageMap[offset+3] = 0xFF;
+                            break;
+                        case 3:
+                            imageMap[offset+0] = 0x00;
+                            imageMap[offset+1] = 0x00;
+                            imageMap[offset+2] = 0xFF;
+                            imageMap[offset+3] = 0xFF;
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+
+    cairo_t *cr = cairo_create(surface);
+    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)imageMap, GDK_COLORSPACE_RGB, TRUE, 8, 160, 144, 160*4, NULL, NULL);
+    gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+    cairo_paint(cr);
+    cairo_destroy(cr);
+    gtk_widget_queue_draw(drawingArea);
+}
+
+
+
 void dumpMem(){    
     FILE *vdump = fopen("dump/VRAM.dump","wb");
     fwrite(VRAM, sizeof(uint8_t), VRAM_SIZE, vdump);
@@ -203,15 +235,28 @@ void dumpMem(){
 }
 
 gboolean idleCallback(gpointer data){
+    gint64 currentTime = g_get_monotonic_time();
     if (cpu.running){
-        executeOpcode();
+        gint64 timeDelta = currentTime - lastTime;
+        
+        uint32_t numCycles = (uint32_t) (timeDelta * TICKS_PER_US/100) + cpu.ticks;
+        while(cpu.ticks < numCycles){
+            executeOpcode();
+            gpuTick();
+        }
         updateLabels();
-        gpuTick();
         if (gpu.draw){
             redrawTiles();
             gpu.draw = 0;
         }
     }
+    gpuTick();
+    if (gpu.draw){
+        redrawTiles();
+        drawScreen();
+        gpu.draw = 0;
+    }
+    lastTime = currentTime;
     return TRUE;
 }
 
@@ -221,6 +266,7 @@ gboolean stepCallback(GtkWidget *widget, GdkEventConfigure *event, gpointer data
         gpuTick();
         if (gpu.draw){
             redrawTiles();
+            drawScreen();
             gpu.draw = 0;
         }
 }

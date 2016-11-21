@@ -21,7 +21,6 @@
 #define DEBUG_HEIGHT 100
 #define CONSOLE_HEIGHT 200
 
-uint32_t fullMap[ORIG_WIDTH*ORIG_HEIGHT];
 
 int main(int argc, char **argv){
     printf("%s: Version %d.%d\n", GBEmu_NAME, GBEmu_VERSION_MAJOR, GBEmu_VERSION_MINOR);

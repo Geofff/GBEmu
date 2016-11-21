@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "memory.h"
+#define TICKS_PER_S 4190000
+#define TICKS_PER_MS (TICKS_PER_S/1000)
+#define TICKS_PER_US (TICKS_PER_MS/1000)
 
 typedef struct CPU {
     uint16_t PC;
@@ -35,6 +38,7 @@ typedef struct CPU {
     uint16_t d16;
     uint8_t d8;
     uint8_t running;
+    uint32_t ticks;
 } CPU;
 
 typedef struct Interrupt {

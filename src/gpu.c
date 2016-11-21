@@ -38,26 +38,35 @@ void renderScanline(){
     if (gpu.bgMode && tile < 128){
         tile += 256;
     }
-    uint32_t colour;
     for(int i = 0; i < 160; i++){
         printf("Plotting colour %d\n", i);
         switch(tiles[i][y][x]){
             case 0x0:
-                colour = 0xFFFFFF;
+                fullMap[canvasOffset+0] = 0xFF;
+                fullMap[canvasOffset+1] = 0xFF;
+                fullMap[canvasOffset+2] = 0xFF;
+                fullMap[canvasOffset+3] = 0xFF;
                 break;
             case 0x1:
-                colour = 0xFF0000;
+                fullMap[canvasOffset+0] = 0xFF;
+                fullMap[canvasOffset+1] = 0x00;
+                fullMap[canvasOffset+2] = 0x00;
+                fullMap[canvasOffset+3] = 0xFF;
                 break;
             case 0x2:
-                colour = 0x00FF00;
+                fullMap[canvasOffset+0] = 0x00;
+                fullMap[canvasOffset+1] = 0xFF;
+                fullMap[canvasOffset+2] = 0x00;
+                fullMap[canvasOffset+3] = 0xFF;
                 break;
             case 0x3:
-                colour = 0x0000FF;
+                fullMap[canvasOffset+0] = 0x00;
+                fullMap[canvasOffset+1] = 0x00;
+                fullMap[canvasOffset+2] = 0xFF;
+                fullMap[canvasOffset+3] = 0xFF;
                 break;
         }
-        fullMap[canvasOffset] = colour;
-        canvasOffset ++;;
-
+        canvasOffset+=4;
         x++;
         if (x == 8){
             x = 0;
@@ -68,6 +77,7 @@ void renderScanline(){
             }
         }
     }
+    gpu.draw = 1;
 
 }
 
