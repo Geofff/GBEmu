@@ -26,8 +26,8 @@ typedef struct CPU {
     };
     union {
         struct{
-            uint8_t H;
             uint8_t L;
+			uint8_t H;
         };
         uint16_t HL;
     };
