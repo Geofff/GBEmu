@@ -19,6 +19,6 @@ configure_file (
 	"${PROJECT_SOURCE_DIR}/config.h"
 )
 
-add_executable(GBEmu ${PROJECT_SOURCE_DIR}/main.c ${PROJECT_SOURCE_DIR}/cpu.c ${PROJECT_SOURCE_DIR}/memory.c ${PROJECT_SOURCE_DIR}/gpu.c ${PROJECT_SOURCE_DIR}/gui.c ${PROJECT_SOURCE_DIR}/gui/window-debugger.c ${PROJECT_SOURCE_DIR}/cb.c)
+add_executable(GBEmu ${PROJECT_SOURCE_DIR}/main.c ${PROJECT_SOURCE_DIR}/cpu.c ${PROJECT_SOURCE_DIR}/memory.c ${PROJECT_SOURCE_DIR}/gpu.c ${PROJECT_SOURCE_DIR}/gui.c ${PROJECT_SOURCE_DIR}/gui/window-debugger.c ${PROJECT_SOURCE_DIR}/cb.c ${PROJECT_SOURCE_DIR}/gui/window-breakpoint.c)
 target_link_libraries(GBEmu "m")
 target_link_libraries(GBEmu ${GTK3_LIBRARIES})
