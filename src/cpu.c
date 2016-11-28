@@ -155,9 +155,9 @@ void code_handler_jmp_rel_cond(){
 void code_handler_jmp_rel(){
     if (0b1000000&(*(uint16_t*)opcode_args_2[opcode])){
         int8_t diff = ~(*(uint8_t*)opcode_args_2[opcode])+1;
-        cpu.PC -= diff;
+        cpu.PC -= (diff-2);
     } else {
-        cpu.PC += (*(uint16_t*)opcode_args_2[opcode]);
+        cpu.PC += (*(uint16_t*)opcode_args_2[opcode])+2;
     }
 }
 
@@ -803,7 +803,6 @@ void executeOpcode(){
         sprintf(formattedString, "%s 0x%X", opcode_names[opcode], cpu.d16);
     }
     */
-
     cpu.PC += opcode_length[opcode];
 }
 
