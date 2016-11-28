@@ -42,8 +42,8 @@ void launchGUI(char *interfaceName, int argc, char **argv){
     g_signal_connect (tileWindow, "destroy", G_CALLBACK (gtk_main_quit), NULL);
 
     tileArea = gtk_builder_get_object (builder, "tilearea");
-    g_signal_connect (tileArea, "draw",
-                    G_CALLBACK (drawTilesCallback), NULL);
+    g_signal_connect (tileArea, "expose-event",
+                    G_CALLBACK (tilesExposeEvent), NULL);
     g_signal_connect (tileArea, "configure-event",
                     G_CALLBACK (configureTilesCallback), NULL);
 
@@ -63,8 +63,8 @@ void launchGUI(char *interfaceName, int argc, char **argv){
                     G_CALLBACK (keyReleaseCallback), NULL);
     g_signal_connect (drawingArea, "configure-event",
                     G_CALLBACK (configureCallback), NULL);
-    g_signal_connect (drawingArea, "draw",
-                    G_CALLBACK (drawCallback), NULL);
+    g_signal_connect (drawingArea, "expose-event",
+                    G_CALLBACK (drawExposeEvent), NULL);
 
     button = gtk_builder_get_object (builder, "exit");
     g_signal_connect (button, "clicked", G_CALLBACK (gtk_main_quit), NULL);
@@ -117,8 +117,11 @@ gboolean drawCallback(GtkWidget *widget, cairo_t *cr, gpointer data){
         printf("Null in regular draw\n");
         return FALSE;
     }
+
     cairo_set_source_surface(cr, surface, 0, 0);
+	printf("surface set ok\n");
     cairo_paint (cr);
+	return;
 }
 
 gboolean drawTilesCallback(GtkWidget *widget, cairo_t *cr, gpointer data){
@@ -129,6 +132,101 @@ gboolean drawTilesCallback(GtkWidget *widget, cairo_t *cr, gpointer data){
     }
     cairo_set_source_surface(cr, tileSurface, 0, 0);
     cairo_paint (cr);
+}
+
+gboolean drawExposeEvent(GtkWidget * widget, GdkEventExpose * event) {
+	GdkRegion *region;
+	GtkWidget *child;
+	cairo_t *cr;
+	uint8_t imageMap[160 * 144 * 4];
+	for (int i = 0; i < 160 * 144 * 4; i++) {
+		imageMap[i] = 0x00;
+	}
+
+	for (int x = 0; x < 20; x++) {
+		for (int y = 0; y < 18; y++) {
+			uint8_t tile = VRAM[0x9800 + y * 20 + x];
+			for (int xx = 0; xx < 8; xx++) {
+				for (int yy = 0; yy < 8; yy++) {
+					int offset = (y * 8 + yy)*(160 * 4) + (x * 8 + xx) * 4;
+					uint8_t pallete = tiles[tile][yy][xx];
+					switch (pallete) {
+						case 0:
+							imageMap[offset + 0] = 0xFF;
+							imageMap[offset + 1] = 0xFF;
+							imageMap[offset + 2] = 0xFF;
+							imageMap[offset + 3] = 0xFF;
+							break;
+						case 1:
+							imageMap[offset + 0] = 0xFF;
+							imageMap[offset + 1] = 0x00;
+							imageMap[offset + 2] = 0x00;
+							imageMap[offset + 3] = 0xFF;
+							break;
+						case 2:
+							imageMap[offset + 0] = 0x00;
+							imageMap[offset + 1] = 0xFF;
+							imageMap[offset + 2] = 0x00;
+							imageMap[offset + 3] = 0xFF;
+							break;
+						case 3:
+							imageMap[offset + 0] = 0x00;
+							imageMap[offset + 1] = 0x00;
+							imageMap[offset + 2] = 0xFF;
+							imageMap[offset + 3] = 0xFF;
+							break;
+					}
+				}
+			}
+		}
+	}
+
+
+	cr = gdk_cairo_create(widget->window);
+	GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)imageMap, GDK_COLORSPACE_RGB, TRUE, 8, 160, 144, 160 * 4, NULL, NULL);
+	gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+	cairo_paint(cr);
+	cairo_destroy(cr);
+	return FALSE;
+}
+
+gboolean tilesExposeEvent(GtkWidget * widget, GdkEventExpose * event) {
+	uint8_t imageMap[TILES_WIDE*TILES_TALL * 8 * 8 * 4];
+	for (int i = 0; i < TILES_WIDE * TILES_TALL; i++) {
+		for (int x = 0; x < 8; x++) {
+			for (int y = 0; y < 8; y++) {
+				uint32_t colour;
+				switch (tiles[i][y][x]) {
+					case 0x0:
+						colour = 0xFFFFFF;
+						break;
+					case 0x1:
+						colour = 0xFF0000;
+						break;
+					case 0x2:
+						colour = 0x00FF00;
+						break;
+					case 0x3:
+						colour = 0x0000FF;
+						break;
+				}
+				uint16_t x1 = (i%TILES_WIDE) * 8 + x;
+				uint16_t y1 = (i / TILES_WIDE) * 8 + y;
+				imageMap[(y1*TILES_WIDE * 8 + x1) * 4] = (colour & 0xFF0000) >> 16;
+				imageMap[(y1*TILES_WIDE * 8 + x1) * 4 + 1] = (colour & 0xFF00) >> 8;
+				imageMap[(y1*TILES_WIDE * 8 + x1) * 4 + 2] = colour & 0xFF;
+				imageMap[(y1*TILES_WIDE * 8 + x1) * 4 + 3] = 0xFF;
+			}
+		}
+	}
+	cairo_t *cr = gdk_cairo_create(widget->window);
+	cairo_scale(cr, 2, 2);
+	GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)imageMap, GDK_COLORSPACE_RGB, TRUE, 8, TILES_WIDE * 8, TILES_TALL * 8, TILES_WIDE * 8 * 4, NULL, NULL);
+	gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+	cairo_paint(cr);
+	cairo_destroy(cr);
+	gtk_widget_queue_draw(tileArea);
+	return FALSE;
 }
 
 gboolean configureTilesCallback(GtkWidget *widget, GdkEventConfigure *event, gpointer data){
@@ -232,8 +330,7 @@ void drawScreen(){
     gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
     cairo_paint(cr);
     cairo_destroy(cr);
-    gtk_widget_queue_draw(drawingArea);
-
+	gtk_widget_queue_draw(drawingArea);
 }
 
 

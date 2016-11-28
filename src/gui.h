@@ -13,6 +13,8 @@ gboolean drawCallback(GtkWidget*, cairo_t*, gpointer);
 gboolean configureTilesCallback(GtkWidget*, GdkEventConfigure*, gpointer);
 gboolean stepCallback(GtkWidget*, GdkEventConfigure*, gpointer);
 gboolean drawTilesCallback(GtkWidget*, cairo_t*, gpointer);
+gboolean tilesExposeEvent(GtkWidget *widget, GdkEventExpose *event);
+gboolean drawExposeEvent(GtkWidget *widget, GdkEventExpose *event);
 
 void redrawTiles();
 void dumpMem();
