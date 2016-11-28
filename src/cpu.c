@@ -143,7 +143,7 @@ void code_handler_jmp_rel_cond(){
             
             diff = -~(*(uint8_t*)opcode_args_2[opcode])+1;
         } else {
-            diff = (*(uint16_t*)opcode_args_2[opcode]);
+            diff = (*(uint16_t*)opcode_args_2[opcode])+2;
         }
         cpu.PC += diff;
     } else {
@@ -178,7 +178,7 @@ void code_handler_jmp_rel_cond_inv(){
             
             diff = -~(*(uint8_t*)opcode_args_2[opcode])+1;
         } else {
-            diff = (*(uint16_t*)opcode_args_2[opcode]);
+            diff = (*(uint16_t*)opcode_args_2[opcode])+2;
         }
         cpu.PC += diff;
     }
