@@ -7,3 +7,4 @@ void debuggerInitWindow(GtkBuilder *);
 
 void updateLabels();
 void updateLabel(char*, uint16_t );
+void updateStack();

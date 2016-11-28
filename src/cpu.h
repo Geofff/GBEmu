@@ -52,6 +52,11 @@ int opcode_implemented[256];
 int opcode_length[256];
 void *opcode_args_1[256];
 void *opcode_args_2[256];
+
+uint16_t locBreakpoints[16];
+uint8_t numLocBreakpoints;
+uint8_t opBreakpoints[16];
+uint8_t numOpBreakpoints;
 uint8_t running;
 void executeOpcode();
 uint8_t opcode;

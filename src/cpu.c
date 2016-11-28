@@ -2,7 +2,8 @@
 #include "cb.h"
 
 // No operation
-void code_handler_nop(){}
+void code_handler_nop(){
+}
 
 // Load byte
 void code_handler_ld_b(){
@@ -429,6 +430,26 @@ void code_handler_cb(){
     executeCB(*(uint8_t*)opcode_args_1[opcode]);
 }
 
+void code_handler_rlca(){
+    uint8_t value = cpu.A;
+    cpu.A <<= 1;
+    cpu.F_C = value >> 7;
+    cpu.A |= (value >> 7);
+    cpu.F_N = 0;
+    cpu.F_H = 0;
+    cpu.F_Z = 0;
+}
+
+void code_handler_rla(){
+    uint8_t value = cpu.A;
+    cpu.A <<= 1;
+    cpu.F_C = value >> 7;
+    cpu.A |= cpu.F_C;
+    cpu.F_N = 0;
+    cpu.F_H = 0;
+    cpu.F_Z = 0;
+}
+
 void initCPU(){
     setupCB();
     cpu.A = 0x11;
@@ -653,9 +674,9 @@ void initCPU(){
     
     REGISTER_OPCODE(20, 12, 0, jmp_rel_cond_inv, "JR NZ,r8", 0, &cpu.d8);
     REGISTER_OPCODE(30, 12, 0, jmp_rel_cond_inv, "JR NC,r8", 1, &cpu.d8);
-    REGISTER_OPCODE(18, 12, 0, jmp_rel_cond, "JR Z,r8", 0, &cpu.d8);
-    REGISTER_OPCODE(28, 12, 0, jmp_rel_cond, "JR C,r8", 1, &cpu.d8);
-    REGISTER_OPCODE(38, 12, 0, jmp_rel, "JR r8", 0, &cpu.d8);
+    REGISTER_OPCODE(28, 12, 0, jmp_rel_cond, "JR Z,r8", 0, &cpu.d8);
+    REGISTER_OPCODE(38, 12, 0, jmp_rel_cond, "JR C,r8", 1, &cpu.d8);
+    REGISTER_OPCODE(18, 12, 0, jmp_rel, "JR r8", 0, &cpu.d8);
     REGISTER_OPCODE(F, 4, 1,rrca, "RRCA", 0,0);
     REGISTER_OPCODE(1F, 4, 1,rra, "RRA", 0,0);
     REGISTER_OPCODE(F3, 4, 1,di, "DI", 0,0);
@@ -697,11 +718,30 @@ void initCPU(){
     REGISTER_OPCODE(FA, 16, 3,ld_w_indirect_read, "LD A,(a16)", &cpu.A, &cpu.d16);
     REGISTER_OPCODE(FB, 4, 1,ei, "EI", NULL, NULL);
     REGISTER_OPCODE(CB, 4, 2,cb, "PREFIX CB", &cpu.d8, NULL);
+    REGISTER_OPCODE( 7, 4, 1, rlca, "RLCA", NULL, NULL);
+    REGISTER_OPCODE(17, 4, 1, rla, "RLA", NULL, NULL);
 
 }
 
 void executeOpcode(){
+    uint16_t lastPC = cpu.PC;
+
+	for (int i = 0; i < numLocBreakpoints; i++) {
+		if (cpu.PC == locBreakpoints[i]) {
+			cpu.running = 0;
+		}
+	}	
+    if (cpu.PC < 0x100){
+        printf("Smashed into ROM\n");
+        cpu.running = 0;
+        return;
+    }
     opcode = readByte(cpu.PC);
+	for (int i = 0; i < numOpBreakpoints; i++) {
+		if (opcode == opBreakpoints[i]) {
+			cpu.running = 0;
+		}
+	}
     cpu.ticks += opcode_cycles[opcode];
     if (opcode_implemented[opcode] == 0){
         printf("Opcode 0x%X at 0x%X is not implemented\n", opcode, cpu.PC);
@@ -752,7 +792,7 @@ void executeOpcode(){
     } else {
         sprintf(formattedString, "%s", opcode_names[opcode]);
     }
-    //printf("%s\n", formattedString);
+    printf("%s\t\t0x%04X\n", formattedString, lastPC);
 
 /*
     sprintf(formattedString, "%s", opcode_names[opcode]);

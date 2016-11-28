@@ -1,8 +1,11 @@
 #include "gui.h"
 #include "gpu.h"
 #include "gui/window-debugger.h"
+#include "gui/window-breakpoint.h"
 #include "cpu.h"
-
+#include <glib.h>
+#define TILES_WIDE 16
+#define TILES_TALL 24
 // Storage of our drawing surface
 cairo_surface_t *surface = NULL;
 cairo_surface_t *tileSurface = NULL;
@@ -20,11 +23,21 @@ void launchGUI(char *interfaceName, int argc, char **argv){
     GObject *runningButton;
     gtk_init(&argc, &argv);
     builder = gtk_builder_new();
-    gtk_builder_add_from_file(builder, interfaceName, NULL);
+	GError *error = NULL;
+    int result = gtk_builder_add_from_file(builder, interfaceName, &error);
 
+	printf("Result was %d\n", result);
+	if (!result) {
+		g_warning("Encountered an error: %s\n", error->message);
+	}
     /* Connect signal handlers to the constructed widgets. */
-    window = GTK_WIDGET(gtk_builder_get_object (builder, "GBEmu"));
+	printf("Loading main window...");
+    window = gtk_builder_get_object (builder, "GBEmu");
     g_signal_connect (window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
+	gtk_widget_show(window);
+	printf("Loaded\n");
+
+
     tileWindow = GTK_WIDGET(gtk_builder_get_object (builder, "tileset"));
     g_signal_connect (tileWindow, "destroy", G_CALLBACK (gtk_main_quit), NULL);
 
@@ -37,7 +50,8 @@ void launchGUI(char *interfaceName, int argc, char **argv){
     // Button to switch running and not
     runningButton = gtk_builder_get_object (builder, "running");
     g_signal_connect (runningButton, "clicked", G_CALLBACK (runningPressCallback), NULL);
-    debuggerInitWindow(builder);
+    debuggerInitWindow(builder); 
+	breakpointInitWindow(builder);
 
 
     drawingArea = gtk_builder_get_object (builder, "drawingarea");
@@ -65,7 +79,7 @@ void launchGUI(char *interfaceName, int argc, char **argv){
     button = gtk_builder_get_object (builder, "step");
     g_signal_connect (button, "clicked", G_CALLBACK (stepCallback), NULL);
     g_timeout_add(1, idleCallback, NULL);
-    lastTime = g_get_monotonic_time();
+	lastTime = 0;
     gtk_main();
 }
 
@@ -93,7 +107,7 @@ gboolean configureCallback(GtkWidget *widget, GdkEventConfigure *event, gpointer
     if (surface){
         cairo_surface_destroy(surface);
     }
-    surface = gdk_window_create_similar_surface(gtk_widget_get_window(drawingArea), CAIRO_CONTENT_COLOR, gtk_widget_get_allocated_width(drawingArea), gtk_widget_get_allocated_height(drawingArea));
+    surface = gdk_window_create_similar_surface(gtk_widget_get_window(drawingArea), CAIRO_CONTENT_COLOR, 160, 144);
     return TRUE;
 }
 
@@ -126,15 +140,13 @@ gboolean configureTilesCallback(GtkWidget *widget, GdkEventConfigure *event, gpo
     if (tileSurface){
         cairo_surface_destroy(tileSurface);
     }
-    tileSurface = gdk_window_create_similar_surface(gtk_widget_get_window(tileArea), CAIRO_CONTENT_COLOR, gtk_widget_get_allocated_width(tileArea), gtk_widget_get_allocated_height(tileArea));
+    tileSurface = gdk_window_create_similar_surface(gtk_widget_get_window(tileArea), CAIRO_CONTENT_COLOR, TILES_WIDE*8*2, TILES_TALL*8*2);
     return TRUE;
 }
 
 void redrawTiles(){
-    int tilesWide = 16;
-    int tilesTall = 24;
-    uint8_t imageMap[tilesWide*tilesTall*8*8*4];
-    for(int i = 0; i < tilesWide * tilesTall; i++){
+    uint8_t imageMap[TILES_WIDE*TILES_TALL*8*8*4];
+    for(int i = 0; i < TILES_WIDE * TILES_TALL; i++){
         for(int x = 0; x < 8; x++){
             for(int y = 0; y < 8; y++){
                 uint32_t colour;
@@ -152,18 +164,18 @@ void redrawTiles(){
                         colour = 0x0000FF;
                         break;
                 }
-                uint16_t x1 = (i%tilesWide)*8+x;
-                uint16_t y1 = (i/tilesWide)*8+y;
-                imageMap[(y1*tilesWide*8+x1)*4] = (colour & 0xFF0000) >> 16;
-                imageMap[(y1*tilesWide*8+x1)*4+1] = (colour & 0xFF00) >> 8;
-                imageMap[(y1*tilesWide*8+x1)*4+2] = colour & 0xFF;
-                imageMap[(y1*tilesWide*8+x1)*4+3] = 0xFF;
+                uint16_t x1 = (i%TILES_WIDE)*8+x;
+                uint16_t y1 = (i/ TILES_WIDE)*8+y;
+                imageMap[(y1*TILES_WIDE *8+x1)*4] = (colour & 0xFF0000) >> 16;
+                imageMap[(y1*TILES_WIDE *8+x1)*4+1] = (colour & 0xFF00) >> 8;
+                imageMap[(y1*TILES_WIDE *8+x1)*4+2] = colour & 0xFF;
+                imageMap[(y1*TILES_WIDE *8+x1)*4+3] = 0xFF;
             }
         }
     }
     cairo_t *cr = cairo_create(tileSurface);
     cairo_scale(cr, 2, 2);
-    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)imageMap, GDK_COLORSPACE_RGB, TRUE, 8, tilesWide*8, tilesTall*8, tilesWide*8*4, NULL, NULL);
+    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((guchar*)imageMap, GDK_COLORSPACE_RGB, TRUE, 8, TILES_WIDE *8, TILES_TALL *8, TILES_WIDE *8*4, NULL, NULL);
     gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
     cairo_paint(cr);
     cairo_destroy(cr);
@@ -221,6 +233,7 @@ void drawScreen(){
     cairo_paint(cr);
     cairo_destroy(cr);
     gtk_widget_queue_draw(drawingArea);
+
 }
 
 
@@ -235,12 +248,12 @@ void dumpMem(){
 }
 
 gboolean idleCallback(gpointer data){
-    gint64 currentTime = g_get_monotonic_time();
+	gint64 currentTime = 0;
     if (cpu.running){
         gint64 timeDelta = currentTime - lastTime;
         
-        uint32_t numCycles = (uint32_t) (timeDelta * TICKS_PER_US/100) + cpu.ticks;
-        while(cpu.ticks < numCycles){
+		uint32_t numCycles = 100 + cpu.ticks;
+        while(cpu.ticks < numCycles && cpu.running){
             executeOpcode();
             gpuTick();
         }

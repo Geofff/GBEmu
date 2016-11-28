@@ -3,7 +3,6 @@
 #include "gpu.h"
 #include "cpu.h" 
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdarg.h>
 #include <time.h>
 #include <gtk/gtk.h>
