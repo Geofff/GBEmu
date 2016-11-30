@@ -43,6 +43,18 @@ uint8_t readByte(uint16_t address){
                     if (address >= 0xFF80){
                         return ZRAM[address & 0x7F];
                     }
+					if (address == 0xFF40) {
+						return gpu.switchLCD;
+					}
+					if (address == 0xFF42) {
+						return gpu.scrollY;
+					}
+					if (address == 0xFF43) {
+						return gpu.scrollX;
+					}
+					if (address == 0xff44) {
+						return gpu.line;
+					}
                     return 0;
                 default:
                     return WRAM[address & 0x1FFF];
@@ -117,11 +129,11 @@ void writeByte(uint16_t address, uint8_t value){
                                 break;
                             // Scroll Y
                             case 0xFF42:
-                                gpu.scanY = value;
+                                gpu.scrollY = value;
                                 break;
                             // Scroll X
                             case 0xFF43:
-                                gpu.scanX = value;
+                                gpu.scrollX = value;
                                 break;
                             
                             // Background pallete
@@ -149,7 +161,13 @@ void writeWord(uint16_t address, uint16_t value){
 }
 
 void resetMemory(){
-    memset(memory, 0, 0x10000);
+	memset(BIOS, 0, BIOS_SIZE);
+	memset(WRAM, 0, WRAM_SIZE);
+	memset(ZRAM, 0, ZRAM_SIZE);
+	memset(ERAM, 0, ERAM_SIZE);
+	memset(VRAM, 0, VRAM_SIZE);
+	memset(OAM, 0, OAM_SIZE);
+	memset(ROM, 0, ROM_SIZE);
 }
 
 void readFile(uint16_t offset, FILE *f){
