@@ -8,3 +8,4 @@ void addCommand();
 void addLocation();
 
 int processEntry(char * entry);
+void breakShowWindow();

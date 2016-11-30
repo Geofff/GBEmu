@@ -7,8 +7,6 @@ uint8_t index;
 void breakpointInitWindow(GtkBuilder *b) {
 	builder = b;
 	GObject *window = gtk_builder_get_object(builder, "breakpoint");
-	g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-	gtk_widget_show(window);
 	GObject *button = gtk_builder_get_object(builder, "add_command");
 	g_signal_connect(button, "clicked", G_CALLBACK(addCommand), NULL);
 	button = gtk_builder_get_object(builder, "add_location");
@@ -69,4 +67,9 @@ int processEntry(char* entry) {
 	if (sscanf(entry, "%X", &value) == 1) return value;
 	if (sscanf(entry, "%x", &value) == 1) return value;
 	return value;
+}
+
+void breakShowWindow() {
+	GObject *window = gtk_builder_get_object(builder, "breakpoint");
+	gtk_widget_show(window);
 }

@@ -2,6 +2,7 @@
 #include "gpu.h"
 #include "gui/window-debugger.h"
 #include "gui/window-breakpoint.h"
+#include "gui/window-disassembly.h"
 #include "cpu.h"
 #include <glib.h>
 #define TILES_WIDE 16
@@ -37,9 +38,8 @@ void launchGUI(char *interfaceName, int argc, char **argv){
 	gtk_widget_show(window);
 	printf("Loaded\n");
 
-
+	// Tileset window rendering
     tileWindow = GTK_WIDGET(gtk_builder_get_object (builder, "tileset"));
-    g_signal_connect (tileWindow, "destroy", G_CALLBACK (gtk_main_quit), NULL);
 
     tileArea = gtk_builder_get_object (builder, "tilearea");
     g_signal_connect (tileArea, "expose-event",
@@ -50,10 +50,37 @@ void launchGUI(char *interfaceName, int argc, char **argv){
     // Button to switch running and not
     runningButton = gtk_builder_get_object (builder, "running");
     g_signal_connect (runningButton, "clicked", G_CALLBACK (runningPressCallback), NULL);
+
+	/*
+		Menu buttons
+	*/
+	GObject *menuItem = gtk_builder_get_object(builder, "menu_exit");
+	g_signal_connect(menuItem, "activate", G_CALLBACK(gtk_main_quit), NULL);
+	// TODO connect open
+	menuItem = gtk_builder_get_object(builder, "menu_open");
+	g_signal_connect(menuItem, "activate", G_CALLBACK(openPressed), NULL);
+	menuItem = gtk_builder_get_object(builder, "menu_reload");
+	g_signal_connect(menuItem, "activate", G_CALLBACK(reloadPressed), NULL);
+	// TODO about menu
+	menuItem = gtk_builder_get_object(builder, "menu_about");
+	g_signal_connect(menuItem, "activate", G_CALLBACK(gtk_main_quit), NULL);
+	menuItem = gtk_builder_get_object(builder, "menu_tile");
+	g_signal_connect(menuItem, "activate", G_CALLBACK(tilePressed), NULL);
+	menuItem = gtk_builder_get_object(builder, "menu_break");
+	g_signal_connect(menuItem, "activate", G_CALLBACK(breakPressed), NULL);
+	menuItem = gtk_builder_get_object(builder, "menu_debug");
+	g_signal_connect(menuItem, "activate", G_CALLBACK(debugPressed), NULL);
+	// TODO Dissasmbler menu
+	menuItem = gtk_builder_get_object(builder, "menu_dis");
+	g_signal_connect(menuItem, "activate", G_CALLBACK(disPressed), NULL);
+
+
+
     debuggerInitWindow(builder); 
 	breakpointInitWindow(builder);
+	disassemblerInitWindow(builder);
 
-
+	// Main drawing area rendering
     drawingArea = gtk_builder_get_object (builder, "drawingarea");
     g_signal_connect (drawingArea, "button-press-event",
                     G_CALLBACK (buttonPressCallback), NULL);
@@ -65,6 +92,8 @@ void launchGUI(char *interfaceName, int argc, char **argv){
                     G_CALLBACK (configureCallback), NULL);
     g_signal_connect (drawingArea, "expose-event",
                     G_CALLBACK (drawExposeEvent), NULL);
+
+	// Main controls
 
     button = gtk_builder_get_object (builder, "exit");
     g_signal_connect (button, "clicked", G_CALLBACK (gtk_main_quit), NULL);
@@ -190,6 +219,17 @@ gboolean drawExposeEvent(GtkWidget * widget, GdkEventExpose * event) {
 	return FALSE;
 }
 
+gboolean tilePressed(GtkWidget * widget, gpointer item) {
+	GObject *window = gtk_builder_get_object(builder, "tileset");
+	gtk_widget_show(window);
+	return FALSE;
+}
+
+gboolean disPressed(GtkWidget * widget, gpointer item) {
+	disassemblerShowWindow();
+	return FALSE;
+}
+
 gboolean tilesExposeEvent(GtkWidget * widget, GdkEventExpose * event) {
 	uint8_t imageMap[TILES_WIDE*TILES_TALL * 8 * 8 * 4];
 	for (int i = 0; i < TILES_WIDE * TILES_TALL; i++) {
@@ -240,6 +280,44 @@ gboolean configureTilesCallback(GtkWidget *widget, GdkEventConfigure *event, gpo
     }
     tileSurface = gdk_window_create_similar_surface(gtk_widget_get_window(tileArea), CAIRO_CONTENT_COLOR, TILES_WIDE*8*2, TILES_TALL*8*2);
     return TRUE;
+}
+
+gboolean breakPressed(GtkWidget * widget, gpointer item) {
+	breakShowWindow();
+	return FALSE;
+}
+
+gboolean debugPressed(GtkWidget * widget, gpointer item) {
+	debugShowWindow();
+	return FALSE;
+}
+
+gboolean openPressed(GtkWidget * widget, gpointer item) {
+	GtkWidget *dialog;
+	GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+	gint res;
+	dialog = gtk_file_chooser_dialog_new("Open File", widget, action, "_Cancel", GTK_RESPONSE_CANCEL, "_Open", GTK_RESPONSE_ACCEPT, NULL);
+	res = gtk_dialog_run(GTK_DIALOG(dialog));
+	if (res == GTK_RESPONSE_ACCEPT) {
+		char *filename;
+		GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+		filename = gtk_file_chooser_get_filename(chooser);
+		resetMemory();
+		initCPU();
+		FILE *rom = fopen(filename, "rb");
+		readFile(0, rom);
+		fclose(rom);
+		g_free(filename);
+	}
+	gtk_widget_destroy(dialog);
+	return FALSE;
+}
+
+gboolean reloadPressed(GtkWidget * widget, gpointer item) {
+	// TODO reset memory
+	// Reload ROM
+	initCPU();
+	return FALSE;
 }
 
 void redrawTiles(){

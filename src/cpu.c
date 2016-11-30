@@ -52,11 +52,11 @@ void code_handler_ld_w_indirect(){
 
 // Load word indirectly
 void code_handler_ldh_b_indirect_r(){
-    *(uint16_t*)opcode_args_2[opcode] = readWord(0xFF00+(*(uint8_t*)opcode_args_1[opcode]));
+    *(uint8_t*)opcode_args_2[opcode] = readByte(0xFF00+(*(uint8_t*)opcode_args_1[opcode]));
 }
 
 void code_handler_ldh_b_indirect_w(){
-    writeByte(0xFF00+(*(uint8_t*)opcode_args_1[opcode]), *(uint16_t*)opcode_args_2[opcode]);
+    writeByte(0xFF00+(*(uint8_t*)opcode_args_1[opcode]), *(uint8_t*)opcode_args_2[opcode]);
 }
 
 void code_handler_call(){

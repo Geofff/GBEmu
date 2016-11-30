@@ -29,17 +29,16 @@ void clearTiles(){
 }
 void renderScanline(){
     uint16_t mapOffset = gpu.bgMode ? 0x1C00 : 0x1800;
-    mapOffset += ((gpu.line + gpu.scanY)&255) >> 3;
-    uint16_t lineOffset = gpu.scanX >> 3;
-    uint8_t x = gpu.scanX & 7;
-    uint8_t y = (gpu.line + gpu.scanY) & 7;
+    mapOffset += ((gpu.line + gpu.scrollY)&255) >> 3;
+    uint16_t lineOffset = gpu.scrollX >> 3;
+    uint8_t x = gpu.scrollX & 7;
+    uint8_t y = (gpu.line + gpu.scrollY) & 7;
     uint16_t canvasOffset = gpu.line * 160;
     uint8_t tile = VRAM[mapOffset+lineOffset];
     if (gpu.bgMode && tile < 128){
         tile += 256;
     }
     for(int i = 0; i < 160; i++){
-        printf("Plotting colour %d\n", i);
         switch(tiles[i][y][x]){
             case 0x0:
                 fullMap[canvasOffset+0] = 0xFF;

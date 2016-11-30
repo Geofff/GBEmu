@@ -9,7 +9,6 @@ void debuggerInitWindow(GtkBuilder *b){
     printf("Finding debugger window\n");
     GObject *window = gtk_builder_get_object (builder, "debugger");
     printf("Found debugger window\n");
-    g_signal_connect (window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
 
 	GtkWidget *view = GTK_WIDGET(gtk_builder_get_object(builder, "stack"));
 	GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
@@ -50,6 +49,7 @@ void updateStack(){
 	GtkTreeIter iter;
 	uint8_t index = 0;
 	char formatString[5];
+	return;
 	for (uint16_t sp = 0xFFFE; sp > cpu.SP; sp--) {
 		uint8_t value = readByte(sp);
 		gtk_list_store_append(stackStore, &iter);
@@ -57,4 +57,9 @@ void updateStack(){
 		gtk_list_store_set(stackStore, &iter, 0, index++, 1, formatString, -1);
 	}
     printf("updating store\n");
+}
+
+void debugShowWindow() {
+	GObject *window = gtk_builder_get_object(builder, "debugger");
+	gtk_widget_show(window);
 }

@@ -15,6 +15,12 @@ gboolean stepCallback(GtkWidget*, GdkEventConfigure*, gpointer);
 gboolean drawTilesCallback(GtkWidget*, cairo_t*, gpointer);
 gboolean tilesExposeEvent(GtkWidget *widget, GdkEventExpose *event);
 gboolean drawExposeEvent(GtkWidget *widget, GdkEventExpose *event);
+gboolean tilePressed(GtkWidget *widget, gpointer item);
+gboolean breakPressed(GtkWidget *widget, gpointer item);
+gboolean debugPressed(GtkWidget *widget, gpointer item);
+gboolean openPressed(GtkWidget *widget, gpointer item);
+gboolean disPressed(GtkWidget *widget, gpointer item);
+gboolean reloadPressed(GtkWidget *widget, gpointer item);
 
 void redrawTiles();
 void dumpMem();

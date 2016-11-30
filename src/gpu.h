@@ -12,8 +12,8 @@ typedef struct GPU{
     uint8_t bgTile;
     uint8_t bgMap;
     uint8_t switchLCD;
-    uint8_t scanX;
-    uint8_t scanY;
+    uint8_t scrollX;
+    uint8_t scrollY;
     uint32_t pallete[4];
     
 } GPU;
